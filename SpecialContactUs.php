@@ -6,12 +6,7 @@ class SpecialContactUs extends SpecialPage {
 	function __construct() {
 		parent::__construct( 'ContactUs' );
 	}
- 
-    function cu_prepareDB() {
-        $dbr = wgGetDB(DB_SLAVE);
-        $dbw = wfGetDB(DB_MASTER);
-        
-    }
+
  
 	function execute( $par ) {
         global $wgOut;

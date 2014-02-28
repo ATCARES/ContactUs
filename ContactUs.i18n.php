@@ -22,27 +22,19 @@ $messages[ 'en' ] = array(
     'contactus-your-email' => 'Your Email Address',
     'contactus-your-username' => 'Your {{SITENAME}} Username',
     'contactus-problem-question' => 'What would you like to ask about?',
+    'contactus-subject' => 'Subject:',
+    'contactus-message' => 'Message body:',
     'contactus-settings-msg' => 'This page allows you to view the current settings of the extension.',
     'contactus-settings-error-public' => 'This extension has not been configured properly. If you are attempting to contact the administration, you '.
     'will be unable to use this form until the problem has been rectified.',
-    'contactus-settings-error-sysop' => 'The extension has not been properly configured. Please ensure that [[MediaWiki:Contactus_users]] has been set'.
-    ' with the proper users and groups.',
+    'contactus-settings-error-sysop' => 'The extension has not been properly configured. The following errors were encountered: $1',
     'contactus-settings-settings' => 'Settings',
     'contactus-table-users' => 'Users set to receive emails',
     'contactus-table-groups' => 'Groups set to receive requests',
-    'contactus-table-other' => 'Other settings',
+    'contactus-table-custom' => 'Custom message',
     'contactus-table-variable' => 'Setting',
     'contactus-table-value' => 'Value',
-    'contactus-table-page' => 'Page to change setting'
+    'contactus-table-page' => 'Page to change setting',
 
 
-);
-
-/** Documentation
- * @author Justin Folvarcik
- */
-$messages['qqq'] = array(
-    'contactus' => 'Title of the page. It shows up in the listing.',
-    'contactus-desc' => 'Description for the extension credits',
-    'contactus-head' => 'The '
 );

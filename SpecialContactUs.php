@@ -5,9 +5,6 @@
 if (!defined('MEDIAWIKI'))
     die("Not a valid entry point.");
 
-// Include the settings class.
-include_once(__DIR__ . '/Settings.php');
-
 class SpecialContactUs extends SpecialPage {
     /** @var \User
      A user object to work with. */
@@ -21,8 +18,6 @@ class SpecialContactUs extends SpecialPage {
      * calls the parent's constructor.
       */
     function __construct(){
-        // Make $this->settings into a settings object
-        $this->settings = new contactUs_settings();
         // Make $this->user into a user object
         $this->user = $this->getUser();
         // And get the result of the parent constructor.
@@ -89,16 +84,17 @@ class SpecialContactUs extends SpecialPage {
     }
     /** This function handles the extension's output */
     protected function build_form($type){
+        global $wgScriptPath;
+        $output = $this->getOutput();
         if ($type == 'email'){
-            $output = $this->getOutput();
             $settings = $this->load_all_settings();
-            if ($settings['custom_message'] && $settings['custom_message'] != '')
-                $output->addWikiText($settings['custom_message']);
-            else
+            Xml::openElement('p', array('id' => 'contactus-msg'));
+             ($settings['custom_message'] && $settings['custom_message'] != '')?
+                $output->addWikiText($settings['custom_message']):
                 $output->addWikiMsg('contactus-page-desc');
-
-            Xml::openElement("div", array('id' => 'contactus_form_wrapper'));
-            Html::openElement('form', array('name' => 'contactus_form', 'method' => 'post', 'id' => 'contactus_form'));
+            Xml::closeElement("p");
+            Xml::openElement("div", array('id' => 'contactus_form_wrapper', 'style' => 'margin:0 auto'));
+            Html::openElement('form', array('name' => 'contactus_form', 'method' => 'post', 'id' => 'contactus_form', 'action' => $wgScriptPath . 'Special:ContactUs?action=submit'));
             Xml::openElement('label', array('for' => 'user-email'));
             $output->addWikiMsg('contactus-your-email');
             Xml::closeElement('label');
@@ -108,35 +104,47 @@ class SpecialContactUs extends SpecialPage {
             Xml::closeElement('label');
             $output->addElement("input", array("type" => 'text', "size" => 60, 'name' => 'user-alias', 'id' => 'contactus_alias_input'));
             $output->addWikiMsg('contactus-problem-question');
-            Xml::openElement('select', array("name" => 'contact_reason', 'id' => 'contactus-contact-reason'));
-            if (!$settings['custom_reasons'])
-                $settings['custom_reasons'] = array('tech' => 'Report a bug or issue', 'affiliate' => 'Request affiliation', 'other' => 'Other');
-            foreach ($settings as $key => $val){
-
+            $output->addHtml("<select name=\"contact_reason\" id=\"contactus-contact-reason\">");
+            if ($settings['custom_reasons']=='')
+                $settings['custom_reasons'] = array('tech' => 'Report a bug or issue', 'affiliate' => 'Request affiliation', 'administration' => 'Contact an admin about site affairs', 'other' => 'Other');
+            foreach ($settings['custom_reasons'] as $key => $val){
+                $output->addElement('option', array("value" => $key),$val);
             }
+            $output->addHTML('</select><br/>');
+            $output->addWikiMsg('contactus-subject');
+            $output->addElement('input', array('name' => 'message-subject', 'id' => 'contactus-subject-box', 'style' => 'width:500px'));
+            $output->addWikiMsg('contactus-message');
+            $output->addElement('input', array('name' => 'message-body', 'id' => 'contactus-message-box', 'style' => 'height:200px;width:500px'));
+            $output->addHTML('<br/>');
+            $output->addHtml(Xml::submitButton('Send Email'));
+            Xml::closeElement('form');
+            Xml::closeElement('div');
         }
         elseif ($type == 'settings'){
-            $text = '{|class="wikitable" id="contactus-settings-table"| '.wfMessage('contactus-table-settings')->Text() . '
-                 | '.wfMessage('contactus-table-variable')->Text() . '
-                 | '.wfMessage('contactus-table-value')->Text() . '
-                 | '.wfMessage('contactus-table-page')->Text() . '
+            $text = '{|class="wikitable" id="contactus-settings-table"| '.wfMessage('contactus-table-settings')->text() . '
+                 | '.wfMessage('contactus-table-variable')->text() . '
+                 | '.wfMessage('contactus-table-value')->text() . '
+                 | '.wfMessage('contactus-table-page')->text() . '
                  |-
-                 | '.wfMessage('contactus-table-users')->Text() . '
+                 | '.wfMessage('contactus-table-users')->text() . '
                  | '.$user.'
                  | [[MediaWiki:Contactus_users]]
                  |-
-                 | '.wfMessage('contactus-table-groups') . '
+                 | '.wfMessage('contactus-table-groups')->text() . '
                  | '.$group.'
                  | [[MediaWiki:Contactus_groups]]
                  |-
                  |style="colspan:4;" | Other
-                 | '.wfMessage('contactus-table-custom') . '
+                 | '.wfMessage('contactus-table-custom')->text() . '
                  |
                  |}';
             Xml::openElement('p', array('id' => 'contactus-settings-msg'));
             $output->addWikiMsg('contactus-settings-msg');
             Xml::closeElement('p');
             $output->addWikiText($text);
+        }
+        elseif ($type == 'success'){
+            $output->addWikiMsg('contactus-email-sent');
         }
     }
 
@@ -147,14 +155,12 @@ class SpecialContactUs extends SpecialPage {
      */
     protected function resolve_request($par){
         $request = $this->getRequest();
-        if ($request->getText('action') == 'submit' && strtolower($par) == 'settings')
-            $submit = true;
-        if (strtolower($par) == 'settings')
-            $page = 'settings';
-        elseif ($par != ''){
-
-            // @todo: Message for the user stating that there are no subpages of this. It's kinda lying, but they don't need to change settings.
-        }
+        $req = array('actions' => '');
+        $par == '' ? $req['type'] = 'email' : null ;
+        ($request->getText('action') == 'submit' && strtolower($par) == 'settings') ? array_merge($req['actions'], array('submit')) : null;
+        ($request->getText('status') == 'success' && strtolower($par) == '') ? array_merge($req['actions'], array('success')) : null;
+        strtolower($par) == 'settings' ? $req['type'] = 'settings' : null;
+        return $req;
     }
     /**
      * This function actually sends the email.
@@ -165,16 +171,27 @@ class SpecialContactUs extends SpecialPage {
     /**
     * Page execution.
     * @param null|string $par
+    * @return void
      */
     function execute( $par ) {
-        $context = $this->resolve_request($par);
         // execute must call this
         $this->setHeaders();
-        if ($request->getText('action') == 'submit' && strtolower($par) != 'settings')
+        $context = $this->resolve_request($par);
+        if ($context['type'] == 'email' && in_array('submit', $context['actions'])) {
             $this->send_mail();
-        $this->build_form('email');
+            return;
+        }
+        elseif($context['type'] == 'email' && !in_array('submit', $context['actions'])){
+            $this->build_form('email');
+        }
+        elseif ($context['type'] == 'settings'){
+            $this->build_form('settings');
 
-
-
+        }
+    }
 }
+
+/** Sub class of SpecialEmailUser to access email sending methods */
+class emailDo extends SpecialEmailUser{
+
 }

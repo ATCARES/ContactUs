@@ -28,9 +28,21 @@ $messages[ 'en' ] = array(
     'contactus-settings-error-sysop' => 'The extension has not been properly configured. Please ensure that [[MediaWiki:Contactus_users]] has been set'.
     ' with the proper users and groups.',
     'contactus-settings-settings' => 'Settings',
-    'contactus-settings-users' => 'Users set to receive emails',
-    'contactus-settings-groups' => 'Groups set to receive requests',
-    'contactus-settings-other' => 'Other settings'
+    'contactus-table-users' => 'Users set to receive emails',
+    'contactus-table-groups' => 'Groups set to receive requests',
+    'contactus-table-other' => 'Other settings',
+    'contactus-table-variable' => 'Setting',
+    'contactus-table-value' => 'Value',
+    'contactus-table-page' => 'Page to change setting'
 
 
+);
+
+/** Documentation
+ * @author Justin Folvarcik
+ */
+$messages['qqq'] = array(
+    'contactus' => 'Title of the page. It shows up in the listing.',
+    'contactus-desc' => 'Description for the extension credits',
+    'contactus-head' => 'The '
 );

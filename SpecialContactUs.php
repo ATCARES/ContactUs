@@ -28,11 +28,9 @@ class SpecialContactUs extends FormSpecialPage {
       */
 
     function __construct(){
-        global $wgGroupPermissions;
-        $wgGroupPermissions['sysop']['contactus-admin'] = true;
         // Make $this->user into a user object
         $this->user = $this->getUser();
-        // Set permission for administration
+        // Set permission to view settings information
         $this->perm = 'contactus-admin';
         // And get the result of the parent constructor.
 		parent::__construct( 'ContactUs' );
@@ -43,7 +41,7 @@ class SpecialContactUs extends FormSpecialPage {
      * @param string $setting
      * @return Content|null|string
      */
-    public function load_user_settings($setting){
+    private function load_user_settings($setting){
         // We can't do anything if that parameter is null.
         if ($setting == '')
             return '';
@@ -61,61 +59,54 @@ class SpecialContactUs extends FormSpecialPage {
     /**
      * Gathers all settings information from the mediawiki pages
      * @return array $settings
+     * @throws mwException
      *
      */
-    public function load_all_settings(){
+    private function load_all_settings(){
+        global $wgContactUs_Recipients, $wgContactUs_Groups;
         $return = array();
-        $users = $this->load_user_settings('Contactus_users');
-
-        $separate = explode('<br/>', $users);
-        $x = 0;
-        foreach ($separate as $people){
-            $name = explode('=', $people);
-            $return['user'][$x]['name'] = $name[0];
-            $groups = explode('|', $name[1]);
-            $return['user'][$x]['groups'] = $groups;
-            $x++;
+        if (!is_array($wgContactUs_Recipients)){
+          if  (in_array('sysop',$this->user->getAllGroups()))
+                $msg = 'contactus-settings-error-sysop';
+          else
+                $msg = 'contactus-settings-error-public';
+            throw new ErrorPageError('contactus-bad-settings', $msg);
         }
+        $this->recipients = $wgContactUs_Recipients;
 
-        $groups = $this->load_user_settings('Contactus_groups');
-        $group = '';
-        if ($groups == '')
-            $group = false;
-        if ($group != false && $group != ''){
-            $group = explode('<br/>', $groups);
+        if (!is_array($wgContactUs_Groups)){
+            if  (in_array('sysop',$this->user->getAllGroups()))
+                $msg = 'contactus-settings-error-sysop';
+            else
+                $msg = 'contactus-settings-error-public';
+            throw new ErrorPageError('contactus-bad-settings', $msg);
         }
-        // If any of these are true, groups aren't set, so we'll throw an error.
-        if (($group == false || empty($group))){
-
-        }
+        $this->groups = $wgContactUs_Groups;
 
         $custom = $this->load_user_settings('Contactus-custom-message');
         if ($custom != '')
             $return['custom_message'] = $custom;
 
-        $reasons = $this->load_user_settings('Contactus-contact-reasons');
-        if ($reasons != ''){
-            $return['reasons'] = $reasons;
-        }
         return $return;
 
     }
     /**
      * This checks permissions and throws a mwException if they are insufficient
+     * @throws mwException
      */
-    public function checkPermissions($perm){
-        if (!$this->user->isAllowed([$perm]))
+    private function checkPermissions($perm){
+        if (!$this->user->isAllowed($perm))
             $this->displayRestrictionError();
     }
     /**
      * This function handles the extension's output
      * @param string $type Type of form to build
      */
-    protected function build_form($type){
-        global $wgScriptPath;
+    private function build_form($type){
         $output = $this->getOutput();
+        $settings = $this->load_all_settings();
         if ($type == 'email'){
-            $settings = $this->load_all_settings();
+
 
 
              Xml::openElement('p', array('id' => 'contactus-msg'));
@@ -125,55 +116,12 @@ class SpecialContactUs extends FormSpecialPage {
             Xml::closeElement("p");
             Xml::openElement("div", array('id' => 'contactus_form_wrapper', 'style' => 'margin:0 auto'));
             $stuff = $this->getFormFields();
-            $this->getForm($stuff)->displayForm($sturrrrrrr = null);
 
-
-            /*
-            Html::openElement('form', array('name' => 'contactus_form', 'method' => 'post', 'id' => 'contactus_form', 'action' => 'index.php'));
-            Xml::openElement('label', array('for' => 'user-email'));
-            $output->addWikiMsg('contactus-your-email');
-            Xml::closeElement('label');
-            $output->addElement("input", array("type" => 'text', "size" => 60, 'name' => 'user-email', 'id' => 'contactus_email_input'));
-            Xml::openElement('label', array('for' => 'user-alias'));
-            $output->addWikiMsg('contactus-your-username');
-            Xml::closeElement('label');
-            $output->addElement("input", array("type" => 'text', "size" => 60, 'name' => 'user-alias', 'id' => 'contactus_alias_input'));
-            $output->addWikiMsg('contactus-problem-question');
-            $output->addHtml("<select name=\"contact_reason\" id=\"contactus-contact-reason\">");
-            if ($settings['custom_reasons']=='')
-                $settings['custom_reasons'] = array('tech' => 'Report a bug or issue', 'affiliate' => 'Request affiliation', 'administration' => 'Contact an admin about site affairs', 'other' => 'Other');
-            foreach ($settings['custom_reasons'] as $key => $val){
-                $output->addElement('option', array("value" => $key),$val);
-            }
-            $output->addHTML('</select><br/>');
-            $output->addWikiMsg('contactus-subject');
-            $output->addElement('input', array('name' => 'message-subject', 'id' => 'contactus-subject-box', 'style' => 'width:500px'));
-            $output->addWikiMsg('contactus-message');
-            $output->addElement('input', array('name' => 'message-body', 'id' => 'contactus-message-box', 'style' => 'text-align:left;height:200px;width:500px'));
-            $output->addHTML('<br/>');
-            $output->addHtml(Xml::submitButton('Send Email'));
-            Xml::closeElement('form');
-            */
+            $this->getForm($stuff)->prepareForm()->displayForm($res = null);
             Xml::closeElement('div');
         }
         elseif ($type == 'settings'){
-            $text = '{|class="wikitable" id="contactus-settings-table"| '.wfMessage('contactus-table-settings')->text() . '
-                 | '.wfMessage('contactus-table-variable')->text() . '
-                 | '.wfMessage('contactus-table-value')->text() . '
-                 | '.wfMessage('contactus-table-page')->text() . '
-                 |-
-                 | '.wfMessage('contactus-table-users')->text() . '
-                 | '.$user.'
-                 | [[MediaWiki:Contactus_users]]
-                 |-
-                 | '.wfMessage('contactus-table-groups')->text() . '
-                 | '.$group.'
-                 | [[MediaWiki:Contactus_groups]]
-                 |-
-                 |style="colspan:4;" | Other
-                 | '.wfMessage('contactus-table-custom')->text() . '
-                 |
-                 |}';
+            $text = $this->make_settings_form($settings);
             Xml::openElement('p', array('id' => 'contactus-settings-msg'));
             $output->addWikiMsg('contactus-settings-msg');
             Xml::closeElement('p');
@@ -185,48 +133,66 @@ class SpecialContactUs extends FormSpecialPage {
     }
 
     /**
-     * Resolve what the user is trying to do
-     * @param null|string $par (intended to be called via $this->execute, with $par from that function as input)
-     * @return string telling us what the user is trying to do
+     * Template for the settings table
+     * @param array $settings array of values generated by $this->load_all_settings()
+     * @return string wikitext
      */
-    protected function resolve_request($par){
-        $request = $this->getRequest();
-        $req = array('actions' => '');
-        $par == '' ? $req['type'] = 'email' : null ;
-        ($request->getText('action') == 'submit' && strtolower($par) == 'settings') ? array_merge($req['actions'], array('submit')) : null;
-        ($request->getText('status') == 'success' && strtolower($par) == '') ? array_merge($req['actions'], array('success')) : null;
-        strtolower($par) == 'settings' ? $req['type'] = 'settings' : null;
-        return $req;
+    private function make_settings_form($settings){
+        $wikitext = '{|class="wikitable" id="contactus-settings-table"| '.wfMessage('contactus-table-settings')->text() . '
+                 | '.wfMessage('contactus-table-variable')->text() . '
+                 | '.wfMessage('contactus-table-value')->text() . '
+                 | '.wfMessage('contactus-table-page')->text() . '
+                 |-
+                 | '.wfMessage('contactus-table-users')->text() . '
+                 | '.$this->recipients.'
+                 | [[MediaWiki:Contactus_users]]
+                 |-
+                 | '.wfMessage('contactus-table-groups')->text() . '
+                 | '.$this->groups.'
+                 | [[MediaWiki:Contactus_groups]]
+                 |-
+                 | colspan="4" style="text-align:center" | '.wfMessage('contactus-table-other')->text(). '
+                 |-
+                 | '.wfMessage('contactus-table-custom')->text() . '
+                 | '.$settings['custom_message'].'
+                 | [[MediaWiki:Contactus_custom]]
+                 |}';
+        return $wikitext;
+    }
+    /**
+     * Gathers recipients' emails
+     * @return array
+     */
+    private function get_to_address(){
+        $email = array();
+        foreach ($this->recipients as $name => $group){
+            $user = User::newFromName($name);
+            $email[] = $user->getEmail();
+        }
+        return $email;
+
     }
     /**
      * This function actually sends the email.
      */
-    protected function send_mail($recipients, $sender, $subject, $body){
+    protected function send_mail(){
+        $to = $this->get_to_address();
         if (empty($recipients))
-            throw new mwException(wfMessage('contactus-no-recipients'));
+            throw new MWException(wfMessage('contactus-no-recipients'));
         preg_match('/^.*\@.*\..*$/', $sender, $matches);
         if ($sender == '')
-            throw new mwException(wfMessage('contactus-no-email'));
+            throw new ErrorPageError('contactus-bad-settings','contactus-no-email');
         if (empty($matches))
-            throw new mwException(wfMessage('contactus-bad-email'));
+            throw new MWException(wfMessage('contactus-bad-email'));
         // Truly and finally send the emails
         $status = userMailer::send($recipients, $sender, $subject, $body);
     }
 
     /**
-     * Create the values to pass to $this->getForm()
-     * for the <select> tag
+     * Create the template to pass to $this->getForm()
      * @return Array
      */
     protected function getFormFields(){
-        $reasons = $this->load_user_settings('contact_reasons');
-        $reasons = explode("\n", $reasons);
-        $x = 0;
-        $master = '';
-        foreach ($reasons as $values){
-            $boom = explode('|', $values);
-            $master[$x][$boom[0]] = $boom[1];
-        }
         $formDescriptor = array(
             'user-email' => array(
                 'label-message' => 'contactus-your-email',
@@ -236,24 +202,30 @@ class SpecialContactUs extends FormSpecialPage {
                 'label-message' => 'contactus-your-username',
                 'class' => 'HTMLTextField', // same as type 'text'
             ),
-/*            'problem-or-question' => array(
+            'problem-or-question' => array(
                 'type' => 'select',
                 'label-message' => 'contactus-problem-question',
+        ));
+        foreach ($this->groups as $key => $val){
+            $formDescriptor['problem-or-question']['options'][$val] = $key;
+        }
 
-            ),
-*/            'subject' => array(
+        $formDescriptor['subject'] = array(
                 'class' => 'HTMLTextField',
                 'label-message' => 'contactus-subject',
-            ),
-            'body' => array(
+            );
+        $formDescriptor['body'] = array(
                 'class' => 'HTMLTextField',
                 'label-message' => 'contactus-message',
-            )
-        );
+            );
         return $formDescriptor;
     }
     function onSubmit(array $data){
-        die(var_dump($data));
+
+        $this->send_mail();
+        throw new mwException();
+
+
     }
     function onSuccess(){
 
@@ -267,17 +239,13 @@ class SpecialContactUs extends FormSpecialPage {
     function execute( $par ) {
         // execute must call this
         $this->setHeaders();
-        $context = $this->resolve_request($par);
-        if ($context['type'] == 'email' && in_array('submit', $context)) {
-            $this->send_mail();
-            return;
-        }
-        elseif($context['type'] == 'email' && !in_array('submit', $context)){
+        $context = strtolower($par) == 'settings' ? 'settings' : 'email';
+        if($context == 'email'){
             if ($this->user->isBlocked())
                 throw new userBlockedError($this->user->getBlock());
             $this->build_form('email') ;
         }
-        elseif ($context['type'] == 'settings'){
+        elseif ($context == 'settings'){
             $this->checkPermissions($this->perm);
             $this->build_form('settings');
 

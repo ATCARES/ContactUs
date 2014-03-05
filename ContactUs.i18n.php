@@ -27,6 +27,7 @@ $messages[ 'en' ] = array(
     'contactus-subject' => 'Subject:',
     'contactus-message' => 'Message body:',
     'contactus-settings-msg' => 'This page allows you to view the current settings of the extension.',
+    'contactus-bad-settings' => 'Misconfiguration',
     'contactus-settings-error-public' => 'This extension has not been configured properly. If you are attempting to contact the administration, you '.
     'will be unable to use this form until the problem has been rectified.',
     'contactus-settings-error-sysop' => 'The extension has not been properly configured. The following errors were encountered: $1',
@@ -37,6 +38,7 @@ $messages[ 'en' ] = array(
     'contactus-table-variable' => 'Setting',
     'contactus-table-value' => 'Value',
     'contactus-table-page' => 'Page to change setting',
+    'contactus-table-other' => 'Other',
     'right-contactus-admin' => 'Allows user to view the settings of the ContactUs extension and make changes.',
     'contactus-no-recipients' => 'Error: No recipients could be found for the email. The extension may be configured incorrectly.'
 

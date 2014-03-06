@@ -28,9 +28,11 @@ $messages[ 'en' ] = array(
     'contactus-message' => 'Message body:',
     'contactus-settings-msg' => 'This page allows you to view the current settings of the extension.',
     'contactus-bad-settings' => 'Misconfiguration',
+    'contactus-bad-recipients' => 'Your recipient users are configured improperly. Please check your LocalSettings.php and correct the problem.',
+    'contactus-bad-groups' => 'Your recipient groups are improperly configured. Please check your LocalSettings.php and correct the problem.',
     'contactus-settings-error-public' => 'This extension has not been configured properly. If you are attempting to contact the administration, you '.
     'will be unable to use this form until the problem has been rectified.',
-    'contactus-settings-error-sysop' => 'The extension has not been properly configured. The following errors were encountered: $1',
+    'contactus-settings-error-sysop' => "The extension has not been properly configured. The following error was encountered:\n\n" . '$1',
     'contactus-settings-settings' => 'Settings',
     'contactus-table-users' => 'Users set to receive emails',
     'contactus-table-groups' => 'Types of emails user will receive',
@@ -40,6 +42,10 @@ $messages[ 'en' ] = array(
     'contactus-table-page' => 'Page to change setting',
     'contactus-table-other' => 'Other',
     'right-contactus-admin' => 'Allows user to view the settings of the ContactUs extension and make changes.',
-    'contactus-no-recipients' => 'Error: No recipients could be found for the email. The extension may be configured incorrectly.'
+    'contactus-no-recipients' => 'Error: No recipients could be found for the email. The extension may be configured incorrectly.',
+    'contactus-emailfail' => 'Email failed',
+    'contactus-emailfail-message' => 'Sending message failed. ',
+    'contactus-success' => 'Thank you. Your message has been sent to the appropriate staff. You will receive a reply as soon as possible.'
+
 
 );

@@ -1,10 +1,10 @@
 <?php
 # Alert the user that this is not a valid access point to MediaWiki if they try to access the special pages file directly.
 if ( !defined( 'MEDIAWIKI' ) ) {
-	echo <<<EOT
-To install my extension, put the following line in LocalSettings.php:
+	echo <<<HTML
+To install my extension, put the following line in LocalSettings.php:<br/>
 require_once( "\$IP/extensions/ContactUs/ContactUs.php" );
-EOT;
+HTML;
 	exit( 1 );
 }
  

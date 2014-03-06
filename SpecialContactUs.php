@@ -23,6 +23,12 @@ class SpecialContactUs extends FormSpecialPage {
      */
     private $perm;
     /**
+     * @var bool Whether or not to disable grouped emails.
+     * If this is false, emails will go to all listed users, and their
+     * groups will be ignored if they're set.
+     */
+    private $no_groups;
+    /**
      * Constructor. Sets up the User object, then
      * calls the parent's constructor.
       */
@@ -37,16 +43,12 @@ class SpecialContactUs extends FormSpecialPage {
     }
 
     /**
-     * Gathers settings from MediaWiki pages
-     * @param string $setting
-     * @return Content|null|string
-     * @todo Might be able to trim this down into a specific function
+     * Get the custom message
+     * @return null|string $cont
      */
-    private function load_user_settings($setting){
-        // We can't do anything if that parameter is null.
-        if ($setting == '')
-            return '';
-        $page = Title::newFromText($setting, NS_MEDIAWIKI);
+    private function load_custom_message(){
+        $msg = 'Contactus_custom';
+        $page = Title::newFromText($msg, NS_MEDIAWIKI);
         if (!$page->exists())
             return '';
         else {
@@ -59,6 +61,7 @@ class SpecialContactUs extends FormSpecialPage {
 
     /**
      * Gathers all settings information from the mediawiki pages
+     * and sets appropriate variables
      * @return array $settings
      * @throws mwException
      *
@@ -66,139 +69,86 @@ class SpecialContactUs extends FormSpecialPage {
     private function load_all_settings(){
         global $wgContactUs_Recipients, $wgContactUs_Groups, $wgContactUs_DisableGroups;
         if ($wgContactUs_DisableGroups === true)
-            $this->groups = false;
+            $this->no_groups = true;
         $return = array();
         if (!is_array($wgContactUs_Recipients)){
           if  (in_array('sysop',$this->user->getAllGroups()))
                 $msg = 'contactus-settings-error-sysop';
           else
                 $msg = 'contactus-settings-error-public';
-            throw new ErrorPageError('contactus-bad-settings', $msg);
+            throw new ErrorPageError('contactus-bad-settings', $msg, wfMessage('contactus-bad-recipients') );
         }
         $this->recipients = $wgContactUs_Recipients;
-
-        if (!is_array($wgContactUs_Groups && $this->groups !== false)){
-            if  (in_array('sysop',$this->user->getAllGroups()))
-                $msg = 'contactus-settings-error-sysop';
-            else
-                $msg = 'contactus-settings-error-public';
-            throw new ErrorPageError('contactus-bad-settings', $msg);
-        }
+        if ($this->no_groups !== true){
+            if (!is_array($wgContactUs_Groups)){
+                if  (in_array('sysop',$this->user->getAllGroups()))
+                    $msg = 'contactus-settings-error-sysop';
+                else
+                    $msg = 'contactus-settings-error-public';
+                throw new ErrorPageError('contactus-bad-settings', $msg, wfMessage('contactus-bad-groups'));
+            }
         $this->groups = $wgContactUs_Groups;
-
-        $custom = $this->load_user_settings('Contactus-custom-message');
-        if ($custom != ''){
-            $this->custom_message = $custom;
-            $return['custom_message'] = $custom;
         }
-        return $return;
 
-    }
-    /**
-     * This checks permissions and throws a mwException if they are insufficient
-     * @throws mwException
-     */
-    public function checkPermissions($perm){
-        if (!$this->user->isAllowed($perm))
-            $this->displayRestrictionError();
     }
     /**
      * This function handles the extension's output
-     * @param string $type Type of form to build
      */
-    private function build_form($type){
+    private function build_form(){
+        $this->load_all_settings();
+        $this->get_to_address('tech');
         $output = $this->getOutput();
-        $settings = $this->load_all_settings();
-        if ($type == 'email'){
-
-
-
-             Xml::openElement('p', array('id' => 'contactus-msg'));
-             ($settings['custom_message'] && $settings['custom_message'] != '')?
-                $output->addWikiText($settings['custom_message']):
-                $output->addWikiMsg('contactus-page-desc');
-            Xml::closeElement("p");
-            Xml::openElement("div", array('id' => 'contactus_form_wrapper', 'style' => 'margin:0 auto'));
-            $stuff = $this->getFormFields();
-
-            $this->getForm($stuff)->prepareForm()->displayForm($res = null);
-            Xml::closeElement('div');
-        }
-        elseif ($type == 'settings'){
-            $text = $this->make_settings_form($settings);
-            Xml::openElement('p', array('id' => 'contactus-settings-msg'));
-            $output->addWikiMsg('contactus-settings-msg');
-            Xml::closeElement('p');
-            $output->addWikiText($text);
-        }
-        elseif ($type == 'success'){
-            $output->addWikiMsg('contactus-email-sent');
-        }
+        $message = $this->load_custom_message();
+        Xml::openElement('p', array('id' => 'contactus-msg'));
+        if (isset($message) && $message != '')
+            $output->addWikiText($message);
+        else
+            $output->addWikiMsg('contactus-page-desc');
+        Xml::closeElement("p");
+        Xml::openElement("div", array('id' => 'contactus_form_wrapper', 'style' => 'margin:0 auto'));
+        $stuff = $this->getFormFields();
+        $this->getForm($stuff)->prepareForm()->displayForm($res = null);
+        Xml::closeElement('div');
     }
 
-    /**
-     * Template for the settings table
-     * @param array $settings array of values generated by $this->load_all_settings()
-     * @return string $wikitext output in wikitext format
-     */
-    private function make_settings_form($settings){
-
-        /*
-        $wikitext = '===Users ($wgContactUs_Recipients)===';
-        $wikitext .= "\n{".'|class="wikitable" id="contactus-users-table"
-        | '.wfMessage('contactus-table-users')->text().'
-        |'.wfMessage('contactus-table-groups')->text() . '
-        |-' . "\n";
-        foreach ($this->recipients as $key => $val){
-            $wikitext .= "| [[User:$key|$key]]
-            | ";
-            foreach($val as $group){
-                $wikitext .= "$group, ";
-            }
-            $wikitext .= "\n|-\n";
-        }
-        $wikitext .= "|}\n\n" . '
-                 {| class="wikitable" id="contactus-groups-table"
-                 | '.wfMessage('contactus-table-groups')->text() . '
-                 | '.$this->groups.'
-                 |}';
-        */
-        return $wikitext;
-    }
     /**
      * Gathers recipients' emails
-     * @return array $email
+     * @param string $group Which group is being emailed
+     * @return array|MailAddress $email
      */
-    private function get_to_address(){
+    private function get_to_address($group){
         $email = array();
-        foreach ($this->recipients as $name => $group){
-            $user = User::newFromName($name);
-            $email[] = $user->getEmail();
+        foreach ($this->recipients as $name => $groups){
+            if (in_array($group, $groups)){
+                $address = User::newFromName($name);
+                $email[] = $address->getEmail();
+
+            }
         }
         return $email;
 
     }
     /**
      * This function actually sends the email.
+     * @param array|MailAddress $to array of email addresses to receive the message
+     * @param string|MailAddress $from sender's email address
+     * @param string $subject the subject of the message
+     * @param string $body the message itself
+     * @return bool|array $errors Returns true if everything went alright,
+     * or returns an error array if there were problems.
      */
-    private function send_mail(){
-        $request = $this->getRequest();
-        $sender = $request->getText('');
-        $to = $this->get_to_address();
-        if (empty($recipients))
-            throw new MWException(wfMessage('contactus-no-recipients'));
-        preg_match('/^.*\@.*\..*$/', $sender, $matches);
-        if ($sender == '')
-            throw new ErrorPageError('contactus-bad-settings','contactus-no-email');
-        if (empty($matches))
-            throw new MWException(wfMessage('contactus-bad-email'));
-        // Truly and finally send the emails
-        $status = userMailer::send($recipients, $sender, $subject, $body);
+    private function send_mail($to, $from, $subject, $body){
+        $status = userMailer::send($to, $from, $subject, $body);
+        if ($status->isGood() == true)
+            return true;
+        $errors = $status->getErrorsArray();
+        return $errors;
     }
 
     /**
      * Create the template to pass to $this->getForm()
      * @return Array
+     * @todo Mimic the form from emailuser or something
      */
     protected function getFormFields(){
         $formDescriptor = array(
@@ -210,7 +160,7 @@ class SpecialContactUs extends FormSpecialPage {
                 'label-message' => 'contactus-your-username',
                 'class' => 'HTMLTextField', // same as type 'text'
             ));
-            if ($this->groups !== false){
+            if ($this->no_groups !== true){
                 $formDescriptor['problem-or-question'] = array(
                     'type' => 'select',
                     'label-message' => 'contactus-problem-question',
@@ -230,17 +180,92 @@ class SpecialContactUs extends FormSpecialPage {
             );
         return $formDescriptor;
     }
-    function onSubmit(array $data){
 
-        $this->send_mail();
-        throw new mwException();
+    /**
+     * Validate the user's email.
+     * @param string $email the data passed onSubmit
+     * @return bool|string false|$email_v returns false if there's a problem with the email
+     */
+    private function validate_email($email){
+        preg_match('/^[a-zA-Z0-9]*\@[a-zA-Z0-9]*\..*$/', $email, $matches);
+        if (empty($matches))
+            return false;
+        else {
+            return $email;
+        }
+    }
+
+    /**
+     * Validate the subject and body to make sure they aren't doing anything funky.
+     * @param string $subject
+     * @param string $body
+     * @return bool|array false|$message Returns false upon failing validation,
+     * otherwise returns the subject and body in an associative array
+     * @todo actually fucking validate
+     */
+    private function validate_message($subject, $body){
+
+        $message = array('subject' => $subject, 'body' =>$body);
+        return $message;
+    }
+    /**
+     * @structure submit
+     * Data submitted
+     * onSubmit called
+     * acquire data
+     * check recipient groups
+     * trim recipients based on groups
+     * put recipients in $to as an array
+     * get user email and validate it
+     * assign it to $from
+     * get subject and body and validate both
+     * assign them to $subject and $body
+     * if anything fails up to this point, everything returns false and aborts the submit
+     * Finally do userMailer::send($to, $from, $subject, $body)
+     * Get status of mailer, and return either true or an array of errors
+     */
+
+    /**
+     * Submit callback. Runs when a user submits the form.
+     * @param array $data
+     * @return Array|Bool|void
+     */
+    function onSubmit(array $data){
+        if (!isset($data['subject']) OR !isset($data['body']) OR !isset($data['user-email'])){
+            return false;
+        }
+        $to = $this->get_to_address($data['problem-or-question']);
+        if ($to === false)
+            return false;
+        $from = $this->validate_email($data['user-email']);
+        if ($from === false)
+            return false;
+        $message = $this->validate_message($data['subject'], $data['body']);
+        if ($message['subject'] === false OR $message['body'] === false)
+            return false;
+        $this->send_mail($to, $from, $message['subject'], $message['body']);
+
 
 
     }
+
+    /**
+     * What to do when we're successful
+     * @todo Make sure this works and stylize appropriately
+     */
     function onSuccess(){
         $op = $this->getOutput();
-        $op->addElement('h2', array('id' => 'shit'), "Worked, yo.");
+        $op->addWikiMsg('contactus-email-sent');
     }
+    /**
+     * @structure execute
+     * Set headers
+     * resolve context
+     * check permissions/blocks and deny access if necessary
+     * check $this->no_groups: Skip question form if true
+     * gather group settings if false;
+     * build form
+     */
     /**
     * Page execution.
     * @param null|string $par
@@ -250,17 +275,9 @@ class SpecialContactUs extends FormSpecialPage {
     function execute( $par ) {
         // execute must call this
         $this->setHeaders();
-        $context = strtolower($par) == 'settings' ? 'settings' : 'email';
-        if($context == 'email'){
             if ($this->user->isBlocked())
                 throw new userBlockedError($this->user->getBlock());
             $this->build_form('email') ;
-        }
-        elseif ($context == 'settings'){
-            $this->checkPermissions($this->perm);
-            $this->build_form('settings');
-
-        }
     }
 }
 

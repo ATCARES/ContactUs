@@ -19,10 +19,6 @@ class SpecialContactUs extends FormSpecialPage {
      */
     private $groups;
     /**
-     * @var string permission string
-     */
-    private $perm;
-    /**
      * @var bool Whether or not to disable grouped emails.
      * If this is false, emails will go to all listed users, and their
      * groups will be ignored if they're set.
@@ -36,8 +32,6 @@ class SpecialContactUs extends FormSpecialPage {
     function __construct(){
         // Make $this->user into a user object
         $this->user = $this->getUser();
-        // Set permission to view settings information
-        $this->perm = 'contactus-admin';
         // And get the result of the parent constructor.
 		parent::__construct( 'ContactUs' );
     }
@@ -148,17 +142,12 @@ class SpecialContactUs extends FormSpecialPage {
     /**
      * Create the template to pass to $this->getForm()
      * @return Array
-     * @todo Mimic the form from emailuser or something
      */
     protected function getFormFields(){
         $formDescriptor = array(
             'user-email' => array(
                 'label-message' => 'contactus-your-email',
                 'type' => 'text'
-            ),
-            'username' => array(
-                'label-message' => 'contactus-your-username',
-                'class' => 'HTMLTextField', // same as type 'text'
             ));
             if ($this->no_groups !== true){
                 $formDescriptor['problem-or-question'] = array(
@@ -173,10 +162,16 @@ class SpecialContactUs extends FormSpecialPage {
         $formDescriptor['subject'] = array(
                 'class' => 'HTMLTextField',
                 'label-message' => 'contactus-subject',
+                'maxlength' => 200,
+                'size' => 60,
+                'required' => true,
             );
         $formDescriptor['body'] = array(
-                'class' => 'HTMLTextField',
                 'label-message' => 'contactus-message',
+                'type' => 'textarea',
+                'rows' => 20,
+                'cols' => 80,
+                'required' => true,
             );
         return $formDescriptor;
     }
@@ -187,7 +182,7 @@ class SpecialContactUs extends FormSpecialPage {
      * @return bool|string false|$email_v returns false if there's a problem with the email
      */
     private function validate_email($email){
-        preg_match('/^[a-zA-Z0-9]*\@[a-zA-Z0-9]*\..*$/', $email, $matches);
+        preg_match('/^.*@.*\..*$/', $email, $matches);
         if (empty($matches))
             return false;
         else {
@@ -201,9 +196,10 @@ class SpecialContactUs extends FormSpecialPage {
      * @param string $body
      * @return bool|array false|$message Returns false upon failing validation,
      * otherwise returns the subject and body in an associative array
-     * @todo actually fucking validate
      */
     private function validate_message($subject, $body){
+        if (!$subject || !$body)
+            return false;
 
         $message = array('subject' => $subject, 'body' =>$body);
         return $message;
@@ -237,16 +233,19 @@ class SpecialContactUs extends FormSpecialPage {
         $to = $this->get_to_address($data['problem-or-question']);
         if ($to === false)
             return false;
+
         $from = $this->validate_email($data['user-email']);
         if ($from === false)
             return false;
         $message = $this->validate_message($data['subject'], $data['body']);
         if ($message['subject'] === false OR $message['body'] === false)
             return false;
-        $this->send_mail($to, $from, $message['subject'], $message['body']);
-
-
-
+        $status = $this->send_mail($to, $from, $message['subject'], $message['body']);
+        if ($status === true)
+            return true;
+        if (is_array($status)){
+            return $status;
+        }
     }
 
     /**
@@ -275,7 +274,8 @@ class SpecialContactUs extends FormSpecialPage {
     function execute( $par ) {
         // execute must call this
         $this->setHeaders();
-            if ($this->user->isBlocked())
+
+        if ($this->user->isBlocked())
                 throw new userBlockedError($this->user->getBlock());
             $this->build_form('email') ;
     }

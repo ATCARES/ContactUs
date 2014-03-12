@@ -20,7 +20,7 @@ class SpecialContactUs extends FormSpecialPage {
     private $groups;
     /**
      * @var bool Whether or not to disable grouped emails.
-     * If this is false, emails will go to all listed users, and their
+     * If this is true, emails will go to all listed users, and their
      * groups will be ignored if they're set.
      */
     private $no_groups;
@@ -44,7 +44,7 @@ class SpecialContactUs extends FormSpecialPage {
         $msg = 'Contactus_custom';
         $page = Title::newFromText($msg, NS_MEDIAWIKI);
         if (!$page->exists())
-            return '';
+            return null;
         else {
             $page = wikiPage::factory($page);
             $cont = $page->getContent();
@@ -57,7 +57,7 @@ class SpecialContactUs extends FormSpecialPage {
      * Gathers all settings information from the mediawiki pages
      * and sets appropriate variables
      * @return array $settings
-     * @throws mwException
+     * @throws ErrorPageError
      *
      */
     private function load_all_settings(){
@@ -89,6 +89,7 @@ class SpecialContactUs extends FormSpecialPage {
      * This function handles the extension's output
      */
     private function build_form(){
+        $res = array();
         $this->load_all_settings();
         $this->get_to_address('tech');
         $output = $this->getOutput();
@@ -101,7 +102,8 @@ class SpecialContactUs extends FormSpecialPage {
         Xml::closeElement("p");
         Xml::openElement("div", array('id' => 'contactus_form_wrapper', 'style' => 'margin:0 auto'));
         $stuff = $this->getFormFields();
-        $this->getForm($stuff)->prepareForm()->displayForm($res = null);
+        $form = $this->getForm($stuff)->prepareForm();
+        $form->displayForm($res);
         Xml::closeElement('div');
     }
 
@@ -204,6 +206,7 @@ class SpecialContactUs extends FormSpecialPage {
         $message = array('subject' => $subject, 'body' =>$body);
         return $message;
     }
+
     /**
      * @structure submit
      * Data submitted
@@ -227,7 +230,7 @@ class SpecialContactUs extends FormSpecialPage {
      * @return Array|Bool|void
      */
     function onSubmit(array $data){
-        if (!isset($data['subject']) OR !isset($data['body']) OR !isset($data['user-email'])){
+        if (empty($data['subject']) OR empty($data['body']) OR empty($data['user-email'])){
             return false;
         }
         $to = $this->get_to_address($data['problem-or-question']);
@@ -250,10 +253,10 @@ class SpecialContactUs extends FormSpecialPage {
 
     /**
      * What to do when we're successful
-     * @todo Make sure this works and stylize appropriately
      */
     function onSuccess(){
         $op = $this->getOutput();
+        $op->setTitle($this->msg('contactus-success'));
         $op->addWikiMsg('contactus-email-sent');
     }
     /**
@@ -265,6 +268,7 @@ class SpecialContactUs extends FormSpecialPage {
      * gather group settings if false;
      * build form
      */
+
     /**
     * Page execution.
     * @param null|string $par
@@ -276,8 +280,12 @@ class SpecialContactUs extends FormSpecialPage {
         $this->setHeaders();
 
         if ($this->user->isBlocked())
-                throw new userBlockedError($this->user->getBlock());
-            $this->build_form('email') ;
+            throw new userBlockedError($this->user->getBlock());
+        $this->build_form('email') ;
+    }
+
+    public function isListed(){
+        return false;
     }
 }
 

@@ -45,7 +45,8 @@ $messages[ 'en' ] = array(
     'contactus-no-recipients' => 'Error: No recipients could be found for the email. The extension may be configured incorrectly.',
     'contactus-emailfail' => 'Email failed',
     'contactus-emailfail-message' => 'Sending message failed. ',
-    'contactus-success' => 'Thank you. Your message has been sent to the appropriate staff. You will receive a reply as soon as possible.'
+    'contactus-success' => 'Email sent',
+    'contactus-email-sent' => 'Thank you. Your message has been sent to the appropriate staff. You will receive a reply as soon as possible.'
 
 
 );

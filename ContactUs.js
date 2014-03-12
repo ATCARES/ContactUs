@@ -5,5 +5,5 @@
  */
 
 function checkForm(){
-    $('#form')
+    $('#form');
 }

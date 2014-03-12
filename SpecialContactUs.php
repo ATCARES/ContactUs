@@ -91,7 +91,6 @@ class SpecialContactUs extends FormSpecialPage {
     private function build_form(){
         $res = array();
         $this->load_all_settings();
-        $this->get_to_address('tech');
         $output = $this->getOutput();
         $message = $this->load_custom_message();
         Xml::openElement('p', array('id' => 'contactus-msg'));
@@ -149,7 +148,9 @@ class SpecialContactUs extends FormSpecialPage {
         $formDescriptor = array(
             'user-email' => array(
                 'label-message' => 'contactus-your-email',
-                'type' => 'text'
+                'type' => 'text',
+                'required' => 'true',
+                'validation-callback' => array( __CLASS__ , 'validateEmail'),
             ));
             if ($this->no_groups !== true){
                 $formDescriptor['problem-or-question'] = array(

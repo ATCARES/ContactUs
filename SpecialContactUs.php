@@ -150,7 +150,6 @@ class SpecialContactUs extends FormSpecialPage {
                 'label-message' => 'contactus-your-email',
                 'type' => 'text',
                 'required' => 'true',
-                'validation-callback' => array( __CLASS__ , 'validateEmail'),
             ));
             if ($this->no_groups !== true){
                 $formDescriptor['problem-or-question'] = array(

@@ -20,7 +20,7 @@ $messages[ 'en' ] = array(
     'contactus-legend' => 'Email Form',
     'contactus-page-desc' => '<p>This page allows users and readers to contact the staff of {{SITENAME}}. Please try to be specific with you inquiry, '
    .'so that it can be sent to the proper staff members.</p>',
-    'contactus-text' => 'This is the email form. All items marked with * are required.',
+    'contactus-text' => 'This is the email form. Please be sure that you fill out all information properly.',
     'contactus-your-email' => 'Your Email Address',
     'contactus-your-username' => 'Your {{SITENAME}} Username',
     'contactus-problem-question' => 'What would you like to ask about?',

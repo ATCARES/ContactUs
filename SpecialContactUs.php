@@ -85,40 +85,22 @@ class SpecialContactUs extends FormSpecialPage {
         }
 
     }
-    /**
-     * This function handles the extension's output
-     */
-    private function build_form(){
-        $res = array();
-        $this->load_all_settings();
-        $output = $this->getOutput();
-        $message = $this->load_custom_message();
-        Xml::openElement('p', array('id' => 'contactus-msg'));
-        if (isset($message) && $message != '')
-            $output->addWikiText($message);
-        else
-            $output->addWikiMsg('contactus-page-desc');
-        Xml::closeElement("p");
-        Xml::openElement("div", array('id' => 'contactus_form_wrapper', 'style' => 'margin:0 auto'));
-        $stuff = $this->getFormFields();
-        $form = $this->getForm($stuff)->prepareForm();
-        $form->displayForm($res);
-        Xml::closeElement('div');
-    }
 
     /**
      * Gathers recipients' emails
-     * @param string $group Which group is being emailed
+     * @param string|bool $group Which group is being emailed. Set to false if grouped emails are disabled.
      * @return array|MailAddress $email
      */
     private function get_to_address($group){
         $email = array();
         foreach ($this->recipients as $name => $groups){
-            if (in_array($group, $groups)){
+            if ($this->no_groups !== true && in_array($group, $groups)):
                 $address = User::newFromName($name);
-                $email[] = $address->getEmail();
-
-            }
+                $email[] = new MailAddress($address);
+            else:
+                $address = User::newFromName($name);
+                $email[] = new MailAddress($address);
+            endif;
         }
         return $email;
 
@@ -184,13 +166,13 @@ class SpecialContactUs extends FormSpecialPage {
      * @return bool|string false|$email_v returns false if there's a problem with the email
      */
     private function validate_email($email){
-        preg_match('/^.*@.*\..*$/', $email, $matches);
+/*        preg_match('/^.*@.*\..*$/', $email, $matches);
         if (empty($matches))
             return false;
         else {
+*/            $email = new MailAddress($email);
             return $email;
         }
-    }
 
     /**
      * Validate the subject and body to make sure they aren't doing anything funky.
@@ -233,7 +215,8 @@ class SpecialContactUs extends FormSpecialPage {
         if (empty($data['subject']) OR empty($data['body']) OR empty($data['user-email'])){
             return false;
         }
-        $to = $this->get_to_address($data['problem-or-question']);
+        $data['problem-or-question'] ? $query = $data['problem-or-question'] : $query = false;
+        $to = $this->get_to_address($query);
         if ($to === false)
             return false;
 
@@ -249,6 +232,7 @@ class SpecialContactUs extends FormSpecialPage {
         if (is_array($status)){
             return $status;
         }
+        return false;
     }
 
     /**
@@ -256,7 +240,7 @@ class SpecialContactUs extends FormSpecialPage {
      */
     function onSuccess(){
         $op = $this->getOutput();
-        $op->setTitle($this->msg('contactus-success'));
+        $op->setTitle(Title::newFromText($this->msg('contactus-success')->parse()));
         $op->addWikiMsg('contactus-email-sent');
     }
     /**
@@ -278,10 +262,17 @@ class SpecialContactUs extends FormSpecialPage {
     function execute( $par ) {
         // execute must call this
         $this->setHeaders();
+        $msg = $this->load_custom_message();
+        if ($msg == null)
+            $msg = wfMessage('contactus-page-desc')->parse();
+        $op = $this->getOutput();
+        $op->addElement('p', array('id' => 'contactus-description'), $msg);
+        $this->load_all_settings();
 
         if ($this->user->isBlocked())
             throw new userBlockedError($this->user->getBlock());
-        $this->build_form('email') ;
+        //$this->build_form('email') ;
+        parent::execute($par);
     }
 
     public function isListed(){
